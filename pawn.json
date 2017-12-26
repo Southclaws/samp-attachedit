@@ -1,0 +1,13 @@
+{
+    "user": "Southclaws",
+    "repo": "samp-attachedit",
+    "entry": "attachedit.pwn",
+    "output": "attachedit.amx",
+    "dependencies": [
+        "Southclaws/samp-stdlib",
+        "Southclaws/samp-logger",
+        "Zeex/amx_assembly",
+        "Misiur/YSI-Includes",
+        "Southclaws/zcmd"
+    ]
+}

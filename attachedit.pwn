@@ -10,29 +10,30 @@
 ==============================================================================*/
 
 
-#include "a_samp"
-#include "zcmd"
+#include <a_samp>
+#include <logger>
+#include <YSI\y_utils>
+#include <zcmd>
 
 
 #define OUTPUT_FILE "SavedAttachments.txt"
 
 
-enum
-{
+enum {
 	DIALOG_MAIN = 7000,
 	DIALOG_INDEX_SELECT,
 	DIALOG_MODEL_SELECT,
 	DIALOG_BONE_SELECT,
 	DIALOG_COORD_INPUT
 }
-enum
-{
+
+enum {
 	Float:COORD_X,
 	Float:COORD_Y,
 	Float:COORD_Z
 }
-enum
-{
+
+enum {
 	POS_OFFSET_X,
 	POS_OFFSET_Y,
 	POS_OFFSET_Z,
@@ -45,50 +46,45 @@ enum
 }
 
 
-new
-	AttachmentBones[18][16] =
-	{
-		{"Spine"},
-		{"Head"},
-		{"Left upper arm"},
-		{"Right upper arm"},
-		{"Left hand"},
-		{"Right hand"},
-		{"Left thigh"},
-		{"Right thigh"},
-		{"Left foot"},
-		{"Right foot"},
-		{"Right calf"},
-		{"Left calf"},
-		{"Left forearm"},
-		{"Right forearm"},
-		{"Left clavicle"},
-		{"Right clavicle"},
-		{"Neck"},
-		{"Jaw"}
-	};
+new AttachmentBones[18][16] = {
+	{"Spine"},
+	{"Head"},
+	{"Left upper arm"},
+	{"Right upper arm"},
+	{"Left hand"},
+	{"Right hand"},
+	{"Left thigh"},
+	{"Right thigh"},
+	{"Left foot"},
+	{"Right foot"},
+	{"Right calf"},
+	{"Left calf"},
+	{"Left forearm"},
+	{"Right forearm"},
+	{"Left clavicle"},
+	{"Right clavicle"},
+	{"Neck"},
+	{"Jaw"}
+};
 
 new
-bool:	gEditingAttachments		[MAX_PLAYERS],
-		gCurrentAttachIndex		[MAX_PLAYERS],
-bool:	gIndexUsed				[MAX_PLAYERS][MAX_PLAYER_ATTACHED_OBJECTS],
-		gIndexModel				[MAX_PLAYERS][MAX_PLAYER_ATTACHED_OBJECTS],
-		gIndexBone				[MAX_PLAYERS][MAX_PLAYER_ATTACHED_OBJECTS],
-Float:	gIndexPos				[MAX_PLAYERS][MAX_PLAYER_ATTACHED_OBJECTS][3],
-Float:	gIndexRot				[MAX_PLAYERS][MAX_PLAYER_ATTACHED_OBJECTS][3],
-Float:	gIndexSca				[MAX_PLAYERS][MAX_PLAYER_ATTACHED_OBJECTS][3],
-		gCurrentAxisEdit		[MAX_PLAYERS];
+	bool:gEditingAttachments[MAX_PLAYERS],
+	gCurrentAttachIndex[MAX_PLAYERS],
+	bool:gIndexUsed[MAX_PLAYERS][MAX_PLAYER_ATTACHED_OBJECTS],
+	gIndexModel[MAX_PLAYERS][MAX_PLAYER_ATTACHED_OBJECTS],
+	gIndexBone[MAX_PLAYERS][MAX_PLAYER_ATTACHED_OBJECTS],
+	Float:gIndexPos[MAX_PLAYERS][MAX_PLAYER_ATTACHED_OBJECTS][3],
+	Float:gIndexRot[MAX_PLAYERS][MAX_PLAYER_ATTACHED_OBJECTS][3],
+	Float:gIndexSca[MAX_PLAYERS][MAX_PLAYER_ATTACHED_OBJECTS][3],
+	gCurrentAxisEdit[MAX_PLAYERS];
 	
 
-public OnFilterScriptInit()
-{
-	for(new i; i < MAX_PLAYERS; i++)
-	{
+public OnScriptInit() {
+	for(new i; i < MAX_PLAYERS; i++) {
 		gCurrentAttachIndex[i] = 0;
 		gIndexModel[i][0] = 18636;
 
-		for(new j; j < MAX_PLAYER_ATTACHED_OBJECTS; j++)
-		{
+		for(new j; j < MAX_PLAYER_ATTACHED_OBJECTS; j++) {
 			gIndexUsed[i][j] = false;
 			gIndexBone[i][j] = 1;
 			gIndexSca[i][j][COORD_X] = 1.0;
@@ -96,32 +92,30 @@ public OnFilterScriptInit()
 			gIndexSca[i][j][COORD_Z] = 1.0;
 		}
 	}
+
+	return 1;
 }
 
-public OnFilterScriptExit()
-{
-	for(new i; i < MAX_PLAYERS; i++)
-	{
-		if(gEditingAttachments[i])
-		{
-			for(new j; j < MAX_PLAYER_ATTACHED_OBJECTS; j++)
-			{
-				if(gIndexUsed[i][j])
+public OnScriptExit() {
+	for(new i; i < MAX_PLAYERS; i++) {
+		if(gEditingAttachments[i]) {
+			for(new j; j < MAX_PLAYER_ATTACHED_OBJECTS; j++) {
+				if(gIndexUsed[i][j]) {
 					RemovePlayerAttachedObject(i, j);
+				}
 			}
 		}
 	}
+
+	return 1;
 }
 
-
-CMD:attachedit(playerid,params[])
-{
+CMD:attachedit(playerid,params[]) {
 	ShowMainEditMenu(playerid);
 	return 1;
 }
 
-ShowMainEditMenu(playerid)
-{
+ShowMainEditMenu(playerid) {
 	new string[312];
 
 	format(string, sizeof(string),
@@ -153,59 +147,90 @@ ShowMainEditMenu(playerid)
 		gIndexSca[playerid][gCurrentAttachIndex[playerid]][COORD_Y],
 		gIndexSca[playerid][gCurrentAttachIndex[playerid]][COORD_Z]);
 
-	ShowPlayerDialog(playerid, DIALOG_MAIN, DIALOG_STYLE_LIST, "Attachment Editor / Main Menu", string, "Accept", "Cancel");
+	ShowPlayerDialog(
+		playerid,
+		DIALOG_MAIN,
+		DIALOG_STYLE_LIST,
+		"Attachment Editor / Main Menu",
+		string,
+		"Accept",
+		"Cancel");
 
 	gEditingAttachments[playerid] = true;
 }
 
-ShowIndexList(playerid)
-{
+ShowIndexList(playerid) {
 	new string[512];
 	
-	for(new i; i < MAX_PLAYER_ATTACHED_OBJECTS; i++)
-	{
-		if(IsPlayerAttachedObjectSlotUsed(playerid, i))
-		{
-			if(gIndexUsed[playerid][i])
-				format(string, sizeof(string), "%sSlot %d (%s - %d)\n", string, i, AttachmentBones[gIndexBone[playerid][i]], gIndexModel[playerid][i]);
-
-			else
+	for(new i; i < MAX_PLAYER_ATTACHED_OBJECTS; i++) {
+		if(IsPlayerAttachedObjectSlotUsed(playerid, i)) {
+			if(gIndexUsed[playerid][i]) {
+				format(
+					string,
+					sizeof(string),
+					"%sSlot %d (%s - %d)\n",
+					string,
+					i,
+					AttachmentBones[gIndexBone[playerid][i]],
+					gIndexModel[playerid][i]);
+			} else {
 				format(string, sizeof(string), "%sSlot %d (External)\n", string, i);
-		}
-		else
-		{
+			}
+		} else {
 			format(string, sizeof(string), "%sSlot %d\n", string, i);
 		}
 	}
 
-	ShowPlayerDialog(playerid, DIALOG_INDEX_SELECT, DIALOG_STYLE_LIST, "Attachment Editor / Index", string, "Accept", "Cancel");
+	ShowPlayerDialog(
+		playerid,
+		DIALOG_INDEX_SELECT,
+		DIALOG_STYLE_LIST,
+		"Attachment Editor / Index",
+		string,
+		"Accept",
+		"Cancel");
 }
 
-ShowModelInput(playerid)
-{
-	ShowPlayerDialog(playerid, DIALOG_MODEL_SELECT, DIALOG_STYLE_INPUT, "Attachment Editor / Model", "Enter a model to attach", "Accept", "Cancel");
+ShowModelInput(playerid) {
+	ShowPlayerDialog(
+		playerid,
+		DIALOG_MODEL_SELECT,
+		DIALOG_STYLE_INPUT,
+		"Attachment Editor / Model",
+		"Enter a model to attach",
+		"Accept", "Cancel");
 }
 
-ShowBoneList(playerid)
-{
+ShowBoneList(playerid) {
 	new string[512];
 	
-	for(new i; i < sizeof(AttachmentBones); i++)
-	{
+	for(new i; i < sizeof(AttachmentBones); i++) {
 		format(string, sizeof(string), "%s%s\n", string, AttachmentBones[i]);
 	}
 
-	ShowPlayerDialog(playerid, DIALOG_BONE_SELECT, DIALOG_STYLE_LIST, "Attachment Editor / Bone", string, "Accept", "Cancel");
+	ShowPlayerDialog(
+		playerid,
+		DIALOG_BONE_SELECT,
+		DIALOG_STYLE_LIST,
+		"Attachment Editor / Bone",
+		string,
+		"Accept",
+		"Cancel");
 }
 
-EditCoord(playerid, coord)
-{
+EditCoord(playerid, coord) {
 	gCurrentAxisEdit[playerid] = coord;
-	ShowPlayerDialog(playerid, DIALOG_COORD_INPUT, DIALOG_STYLE_INPUT, "Attachment Editor / Offset", "Enter a floating point value for the offset:", "Accept", "Cancel");
+	ShowPlayerDialog(
+		playerid,
+		DIALOG_COORD_INPUT,
+		DIALOG_STYLE_INPUT,
+		"Attachment Editor / Offset",
+		"Enter a floating point value for the offset:",
+		"Accept",
+		"Cancel");
 }
 
-EditAttachment(playerid)
-{
+EditAttachment(playerid) {
 	SetPlayerAttachedObject(playerid,
 		gCurrentAttachIndex[playerid],
 		gIndexModel[playerid][gCurrentAttachIndex[playerid]],
@@ -225,8 +250,7 @@ EditAttachment(playerid)
 	gIndexUsed[playerid][gCurrentAttachIndex[playerid]] = true;
 }
 
-ClearCurrentIndex(playerid)
-{
+ClearCurrentIndex(playerid) {
 	gIndexModel[playerid][gCurrentAttachIndex[playerid]] = 0;
 	gIndexBone[playerid][gCurrentAttachIndex[playerid]] = 1;
 	gIndexPos[playerid][gCurrentAttachIndex[playerid]][COORD_X] = 0.0;
@@ -244,21 +268,20 @@ ClearCurrentIndex(playerid)
 	ShowMainEditMenu(playerid);
 }
 
-SaveAttachedObjects(playerid)
-{
+SaveAttachedObjects(playerid) {
 	new
 		str[256],
 		File:file;
 
-	if(!fexist(OUTPUT_FILE))
+	if(!fexist(OUTPUT_FILE)) {
 		file = fopen(OUTPUT_FILE, io_write);
-
-	else
+	} else {
 		file = fopen(OUTPUT_FILE, io_append);
+	}
 
-	if(!file)
-	{
-		print("ERROR: Opening file "OUTPUT_FILE"");
+	if(!file) {
+		err("failed to open file for writing",
+			_s("filename", OUTPUT_FILE));
 		return 0;
 	}
 
@@ -286,88 +309,63 @@ SaveAttachedObjects(playerid)
 }
 
 
-public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
-{
-	if(dialogid == DIALOG_MAIN)
-	{
-		if(response)
-		{
-			switch(listitem)
-			{
-				case 00:ShowIndexList(playerid);
-				case 01:ShowModelInput(playerid);
-				case 02:ShowBoneList(playerid);
-				case 03:EditCoord(playerid, POS_OFFSET_X);
-				case 04:EditCoord(playerid, POS_OFFSET_Y);
-				case 05:EditCoord(playerid, POS_OFFSET_Z);
-				case 06:EditCoord(playerid, ROT_OFFSET_X);
-				case 07:EditCoord(playerid, ROT_OFFSET_Y);
-				case 08:EditCoord(playerid, ROT_OFFSET_Z);
-				case 09:EditCoord(playerid, SCALE_X);
-				case 10:EditCoord(playerid, SCALE_Y);
-				case 11:EditCoord(playerid, SCALE_Z);
-				case 12:EditAttachment(playerid);
-				case 13:ClearCurrentIndex(playerid);
-				case 14:SaveAttachedObjects(playerid);
+public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[]) {
+	if(dialogid == DIALOG_MAIN) {
+		if(response) {
+			switch(listitem) {
+				case 0: ShowIndexList(playerid);
+				case 1: ShowModelInput(playerid);
+				case 2: ShowBoneList(playerid);
+				case 3: EditCoord(playerid, POS_OFFSET_X);
+				case 4: EditCoord(playerid, POS_OFFSET_Y);
+				case 5: EditCoord(playerid, POS_OFFSET_Z);
+				case 6: EditCoord(playerid, ROT_OFFSET_X);
+				case 7: EditCoord(playerid, ROT_OFFSET_Y);
+				case 8: EditCoord(playerid, ROT_OFFSET_Z);
+				case 9: EditCoord(playerid, SCALE_X);
+				case 10: EditCoord(playerid, SCALE_Y);
+				case 11: EditCoord(playerid, SCALE_Z);
+				case 12: EditAttachment(playerid);
+				case 13: ClearCurrentIndex(playerid);
+				case 14: SaveAttachedObjects(playerid);
 			}
 		}
-	}
-	if(dialogid == DIALOG_INDEX_SELECT)
-	{
-		if(response)
-		{
+	} else if(dialogid == DIALOG_INDEX_SELECT) {
+		if(response) {
 			gCurrentAttachIndex[playerid] = listitem;
 			ShowMainEditMenu(playerid);
-		}
-		else
-		{
+		} else {
 			ShowMainEditMenu(playerid);
 		}
-
 		return 1;
-	}
-	if(dialogid == DIALOG_MODEL_SELECT)
-	{
-		if(response)
-		{
+	} else if(dialogid == DIALOG_MODEL_SELECT) {
+		if(response) {
 			gIndexModel[playerid][gCurrentAttachIndex[playerid]] = strval(inputtext);
 			ShowMainEditMenu(playerid);
-		}
-		else
-		{
+		} else {
 			ShowMainEditMenu(playerid);
 		}
-	}
-
-	if(dialogid == DIALOG_BONE_SELECT)
-	{
-		if(response)
-		{
+	} else if(dialogid == DIALOG_BONE_SELECT) {
+		if(response) {
 			gIndexBone[playerid][gCurrentAttachIndex[playerid]] = listitem + 1;
 			ShowMainEditMenu(playerid);
-		}
-		else
-		{
+		} else {
 			ShowMainEditMenu(playerid);
 		}
-	}
-	if(dialogid == DIALOG_COORD_INPUT)
-	{
-		if(response)
-		{
+	} else if(dialogid == DIALOG_COORD_INPUT) {
+		if(response) {
 			new Float:value = floatstr(inputtext);
 
-			switch(gCurrentAxisEdit[playerid])
-			{
-				case POS_OFFSET_X:  gIndexPos[playerid][gCurrentAttachIndex[playerid]][COORD_X] = value;
-				case POS_OFFSET_Y:  gIndexPos[playerid][gCurrentAttachIndex[playerid]][COORD_Y] = value;
-				case POS_OFFSET_Z:  gIndexPos[playerid][gCurrentAttachIndex[playerid]][COORD_Z] = value;
-				case ROT_OFFSET_X:  gIndexRot[playerid][gCurrentAttachIndex[playerid]][COORD_X] = value;
-				case ROT_OFFSET_Y:  gIndexRot[playerid][gCurrentAttachIndex[playerid]][COORD_Y] = value;
-				case ROT_OFFSET_Z:  gIndexRot[playerid][gCurrentAttachIndex[playerid]][COORD_Z] = value;
-				case SCALE_X:       gIndexSca[playerid][gCurrentAttachIndex[playerid]][COORD_X] = value;
-				case SCALE_Y:       gIndexSca[playerid][gCurrentAttachIndex[playerid]][COORD_Y] = value;
-				case SCALE_Z:       gIndexSca[playerid][gCurrentAttachIndex[playerid]][COORD_Z] = value;
+			switch(gCurrentAxisEdit[playerid]) {
+				case POS_OFFSET_X: gIndexPos[playerid][gCurrentAttachIndex[playerid]][COORD_X] = value;
+				case POS_OFFSET_Y: gIndexPos[playerid][gCurrentAttachIndex[playerid]][COORD_Y] = value;
+				case POS_OFFSET_Z: gIndexPos[playerid][gCurrentAttachIndex[playerid]][COORD_Z] = value;
+				case ROT_OFFSET_X: gIndexRot[playerid][gCurrentAttachIndex[playerid]][COORD_X] = value;
+				case ROT_OFFSET_Y: gIndexRot[playerid][gCurrentAttachIndex[playerid]][COORD_Y] = value;
+				case ROT_OFFSET_Z: gIndexRot[playerid][gCurrentAttachIndex[playerid]][COORD_Z] = value;
+				case SCALE_X: gIndexSca[playerid][gCurrentAttachIndex[playerid]][COORD_X] = value;
+				case SCALE_Y: gIndexSca[playerid][gCurrentAttachIndex[playerid]][COORD_Y] = value;
+				case SCALE_Z: gIndexSca[playerid][gCurrentAttachIndex[playerid]][COORD_Z] = value;
 			}
 
 			SetPlayerAttachedObject(playerid,
@@ -386,11 +384,16 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
 		}
 		ShowMainEditMenu(playerid);
 	}
+
 	return 1;
 }
 
-public OnPlayerEditAttachedObject(playerid, response, index, modelid, boneid, Float:fOffsetX, Float:fOffsetY, Float:fOffsetZ, Float:fRotX, Float:fRotY, Float:fRotZ, Float:fScaleX, Float:fScaleY, Float:fScaleZ)
-{
+public OnPlayerEditAttachedObject(
+	playerid, response, index, modelid, boneid,
+	Float:fOffsetX, Float:fOffsetY, Float:fOffsetZ,
+	Float:fRotX, Float:fRotY, Float:fRotZ,
+	Float:fScaleX, Float:fScaleY, Float:fScaleZ
+) {
 	gIndexPos[playerid][gCurrentAttachIndex[playerid]][COORD_X] = fOffsetX;
 	gIndexPos[playerid][gCurrentAttachIndex[playerid]][COORD_Y] = fOffsetY;
 	gIndexPos[playerid][gCurrentAttachIndex[playerid]][COORD_Z] = fOffsetZ;
@@ -403,7 +406,12 @@ public OnPlayerEditAttachedObject(playerid, response, index, modelid, boneid, Fl
 
 	ShowMainEditMenu(playerid);
 
-	SetPlayerAttachedObject(playerid, index, modelid, boneid, fOffsetX, fOffsetY, fOffsetZ, fRotX, fRotY, fRotZ, fScaleX, fScaleY, fScaleZ);
+	SetPlayerAttachedObject(
+		playerid, index, modelid, boneid,
+		fOffsetX, fOffsetY, fOffsetZ,
+		fRotX, fRotY, fRotZ,
+		fScaleX, fScaleY, fScaleZ
+	);
 
 	return 1;
 }
